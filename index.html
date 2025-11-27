@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>💖 Neon Kalp Parçacık Animasyonu</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: linear-gradient(#2860ff, #70a0ff);
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      const canvas = document.getElementById("canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const NUM_PARTICLES = 1500; // artırdık
+      const SPEED = 0.12;
+      const WORD_DELAY = 30;
+      const messages = [
+        "SENİ SEVİYORUM",
+        "BUNU BİLİYORSUN",
+        "SANA ÖNEMLİ BİR SORUM VAR",
+        "UZAKTAN TANIDIĞIN BİR ÇOCUKLA (BENİMLE)",
+        "HAYATINI PAYLAŞMAK İSTER MİSİN?",
+        "BU ZOR HAYATTA BENİMLE BİRLİKTE OLUR MUSUN?",
+        "CEREN, BENİM GERÇEĞİM OLUR MUSUN?",
+      ];
+
+      let msgIndex = 0;
+      let currentMessage = messages[msgIndex];
+      let words = currentMessage.split(" ");
+      let displayedWords = [];
+      let currentWordIndex = 0;
+      let wordTimer = 0;
+
+      // Kalp noktaları
+      function heartPoints(scale = 16) {
+        let points = [];
+        for (let t = 0; t < 360; t++) {
+          let angle = (t * Math.PI) / 180;
+          let x = 16 * Math.sin(angle) ** 3;
+          let y =
+            13 * Math.cos(angle) -
+            5 * Math.cos(2 * angle) -
+            2 * Math.cos(3 * angle) -
+            Math.cos(4 * angle);
+          points.push({
+            x: canvas.width / 2 + x * scale,
+            y: canvas.height / 2 - y * scale,
+          });
+        }
+        return points;
+      }
+
+      const heartShape = heartPoints();
+
+      // Particles
+      let particles = [];
+      for (let i = 0; i < NUM_PARTICLES; i++) {
+        let hx = heartShape[Math.floor(Math.random() * heartShape.length)].x;
+        let hy = heartShape[Math.floor(Math.random() * heartShape.length)].y;
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          tx: hx,
+          ty: hy,
+          color: `rgb(${150 + Math.random() * 30}, ${
+            170 + Math.random() * 50
+          }, ${200 + Math.random() * 55})`,
+        });
+      }
+
+      let state = "gather";
+      let holdTimer = 0;
+      let disperseTimer = 0;
+
+      function drawHeartNeon() {
+        ctx.strokeStyle = "rgba(255,0,0,0.7)";
+        ctx.lineWidth = 4;
+        ctx.shadowColor = "red";
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        for (let i = 0; i < heartShape.length; i++) {
+          const p = heartShape[i];
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.shadowBlur = 0; // blur reset
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // gradient background
+        let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "#2860ff");
+        gradient.addColorStop(1, "#70a0ff");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // particles
+        for (let p of particles) {
+          let dx = p.tx - p.x;
+          let dy = p.ty - p.y;
+          p.x += dx * SPEED;
+          p.y += dy * SPEED;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+
+        // state machine
+        if (state == "gather") {
+          let totalDist = 0;
+          for (let p of particles) {
+            totalDist += Math.abs(p.tx - p.x) + Math.abs(p.ty - p.y);
+          }
+          let avgDist = totalDist / NUM_PARTICLES;
+          if (avgDist < 35) {
+            state = "show_text";
+            displayedWords = [];
+            currentWordIndex = 0;
+            wordTimer = 0;
+          }
+        } else if (state == "show_text") {
+          if (currentWordIndex < words.length) {
+            wordTimer++;
+            if (wordTimer >= WORD_DELAY) {
+              displayedWords.push(words[currentWordIndex]);
+              currentWordIndex++;
+              wordTimer = 0;
+            }
+          } else {
+            state = "hold";
+            holdTimer = 0;
+          }
+        } else if (state == "hold") {
+          holdTimer++;
+          if (holdTimer >= 120) {
+            state = "disperse";
+            disperseTimer = 0;
+            for (let p of particles) {
+              p.tx = Math.random() * canvas.width;
+              p.ty = Math.random() * canvas.height;
+            }
+          }
+        } else if (state == "disperse") {
+          disperseTimer++;
+          if (disperseTimer >= 160) {
+            state = "gather";
+            msgIndex = (msgIndex + 1) % messages.length;
+            currentMessage = messages[msgIndex];
+            words = currentMessage.split(" ");
+            for (let p of particles) {
+              let point =
+                heartShape[Math.floor(Math.random() * heartShape.length)];
+              p.tx = point.x;
+              p.ty = point.y;
+            }
+          }
+        }
+
+        // draw neon heart when gathered
+        if (state === "show_text" || state === "hold") {
+          drawHeartNeon();
+        }
+
+        // draw words
+        ctx.font = "60px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#c8e6ff";
+        ctx.fillText(
+          displayedWords.join(" "),
+          canvas.width / 2,
+          canvas.height / 2
+        );
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
