@@ -2,7 +2,6 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <title>💖 Neon Kalp Parçacık Animasyonu</title>
     <style>
       body {
         margin: 0;
@@ -23,7 +22,7 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      const NUM_PARTICLES = 1500; // artırdık
+      const NUM_PARTICLES = 1500;
       const SPEED = 0.12;
       const WORD_DELAY = 30;
       const messages = [
@@ -32,7 +31,7 @@
         "SANA ÖNEMLİ BİR SORUM VAR",
         "UZAKTAN TANIDIĞIN BİR ÇOCUKLA (BENİMLE)",
         "HAYATINI PAYLAŞMAK İSTER MİSİN?",
-        "BU ZOR HAYATTA BENİMLE BİRLİKTE OLUR MUSUN?",
+        "BU ZORLU HAYATTA BENİMLE BİRLİKTE OLUR MUSUN?",
         "CEREN, BENİM GERÇEĞİM OLUR MUSUN?",
       ];
 
@@ -97,7 +96,16 @@
         }
         ctx.closePath();
         ctx.stroke();
-        ctx.shadowBlur = 0; // blur reset
+        ctx.shadowBlur = 0;
+      }
+
+      function splitTextToTwoLines(text) {
+        if (text.length <= 25) return [text]; // kısa metin tek satır
+        let mid = Math.floor(text.length / 2);
+        // boşluk noktasına bakarak böl
+        let left = text.lastIndexOf(" ", mid);
+        if (left == -1) left = mid;
+        return [text.slice(0, left), text.slice(left + 1)];
       }
 
       function animate() {
@@ -174,20 +182,24 @@
           }
         }
 
-        // draw neon heart when gathered
+        // draw neon heart
         if (state === "show_text" || state === "hold") {
           drawHeartNeon();
         }
 
-        // draw words
-        ctx.font = "60px Arial";
+        // draw text
+        ctx.font = "50px Arial";
         ctx.textAlign = "center";
         ctx.fillStyle = "#c8e6ff";
-        ctx.fillText(
-          displayedWords.join(" "),
-          canvas.width / 2,
-          canvas.height / 2
-        );
+        let fullText = displayedWords.join(" ");
+        let lines = splitTextToTwoLines(fullText);
+        for (let i = 0; i < lines.length; i++) {
+          ctx.fillText(
+            lines[i],
+            canvas.width / 2,
+            canvas.height / 2 - 20 + i * 60
+          );
+        }
 
         requestAnimationFrame(animate);
       }
